@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reddit Lead Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a1a;
+      border-bottom: 1px solid #2a2a2a;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header .logo {
+      width: 32px; height: 32px;
+      background: #ff4500;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+
+    /* Provider bar */
+    .provider-bar {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .provider-label { font-size: 12px; color: #555; }
+
+    .provider-pills { display: flex; gap: 6px; }
+
+    .provider-pill {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: #222;
+      color: #555;
+    }
+
+    .provider-pill.available { color: #888; border-color: #333; }
+    .provider-pill.active {
+      color: #fff;
+      border-color: transparent;
+    }
+    .provider-pill.active.openai  { background: #10a37f; }
+    .provider-pill.active.claude  { background: #c96442; }
+    .provider-pill.active.ollama  { background: #5b7dd8; }
+
+    .provider-pill.unavailable { opacity: 0.3; cursor: not-allowed; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    /* Mode Toggle */
+    .mode-toggle {
+      display: flex;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 28px;
+      width: fit-content;
+    }
+
+    .mode-btn {
+      padding: 9px 20px;
+      border: none;
+      background: transparent;
+      color: #888;
+      cursor: pointer;
+      border-radius: 7px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .mode-btn.active { background: #ff4500; color: #fff; }
+
+    /* Panels */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card h2 { font-size: 15px; font-weight: 600; color: #ccc; margin-bottom: 16px; }
+
+    label { display: block; font-size: 13px; color: #999; margin-bottom: 6px; }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #e0e0e0;
+      font-size: 14px;
+      padding: 12px;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    textarea:focus, input[type="text"]:focus { border-color: #ff4500; }
+    textarea { min-height: 130px; }
+
+    /* Subreddit tags */
+    .tag-input-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 8px;
+      min-height: 48px;
+      cursor: text;
+    }
+
+    .tag-input-wrap:focus-within { border-color: #ff4500; }
+
+    .tag {
+      display: flex; align-items: center; gap: 4px;
+      background: #2a2a2a;
+      border-radius: 5px;
+      padding: 3px 8px;
+      font-size: 13px;
+      color: #ccc;
+    }
+
+    .tag button {
+      background: none; border: none; color: #888;
+      cursor: pointer; font-size: 14px; line-height: 1;
+      padding: 0 2px;
+    }
+
+    .tag button:hover { color: #ff4500; }
+
+    .tag-text-input {
+      border: none; background: transparent; outline: none;
+      color: #e0e0e0; font-size: 13px; flex: 1; min-width: 120px;
+      padding: 3px 4px;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 11px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary { background: #ff4500; color: #fff; }
+    .btn-primary:hover { background: #e03d00; }
+    .btn-primary:disabled { background: #552200; color: #888; cursor: not-allowed; }
+
+    /* Results */
+    .results-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .results-header h2 { font-size: 15px; color: #ccc; font-weight: 600; }
+
+    .results-meta { display: flex; align-items: center; gap: 8px; }
+
+    .count-badge {
+      background: #ff4500; color: #fff;
+      font-size: 12px; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px;
+    }
+
+    .used-provider-badge {
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .used-provider-badge.openai  { background: #0d3d2e; color: #10a37f; }
+    .used-provider-badge.claude  { background: #3d1e14; color: #e07050; }
+    .used-provider-badge.ollama  { background: #1a2240; color: #8aadff; }
+
+    .suggested-subs {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      margin-bottom: 20px;
+    }
+
+    .sub-chip {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px; color: #aaa;
+    }
+
+    .sub-chip a { color: #ff6534; text-decoration: none; }
+    .sub-chip a:hover { text-decoration: underline; }
+
+    .thread-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .thread-card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 16px;
+      transition: border-color 0.15s;
+    }
+
+    .thread-card:hover { border-color: #ff4500; }
+
+    .thread-top {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .thread-title {
+      font-size: 14px; font-weight: 600; color: #fff;
+      text-decoration: none; line-height: 1.4; flex: 1;
+    }
+
+    .thread-title:hover { color: #ff6534; }
+
+    .score-badge {
+      flex-shrink: 0;
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+    }
+
+    .score-high { background: #1a3a1a; color: #4caf50; border: 1px solid #2d6b2d; }
+    .score-mid  { background: #3a2a00; color: #ffc107; border: 1px solid #664d00; }
+    .score-low  { background: #2a1a1a; color: #f44336; border: 1px solid #661111; }
+
+    .thread-meta {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      font-size: 12px; color: #666; margin-bottom: 10px;
+    }
+
+    .meta-pill {
+      background: #222; border-radius: 4px;
+      padding: 2px 8px; color: #888;
+    }
+    .meta-pill.sub { color: #ff6534; }
+
+    .thread-reason {
+      font-size: 12px; color: #aaa;
+      background: #222;
+      border-left: 3px solid #ff4500;
+      padding: 8px 12px;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 8px;
+    }
+
+    .thread-action {
+      font-size: 12px; color: #4caf50;
+      background: #0d1f0d;
+      border: 1px solid #1e3d1e;
+      border-radius: 6px;
+      padding: 5px 10px;
+      display: inline-block;
+    }
+
+    /* Loading */
+    .loading { display: none; text-align: center; padding: 40px; color: #666; }
+    .loading.active { display: block; }
+
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid #2a2a2a;
+      border-top-color: #ff4500;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: #2a1111; border: 1px solid #661111;
+      border-radius: 8px; padding: 14px 16px;
+      color: #f88; font-size: 13px; display: none;
+    }
+
+    .empty-state { text-align: center; padding: 40px; color: #555; font-size: 14px; }
+
+    @media (max-width: 700px) {
+      .provider-bar { display: none; }
+      .container { padding: 16px; }
+      .thread-top { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🔴</div>
+  <h1>Reddit Lead Generator</h1>
+
+  <div class="provider-bar">
+    <span class="provider-label">AI via</span>
+    <div class="provider-pills" id="provider-pills">
+      <span class="provider-pill unavailable">Loading...</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="mode-btn-1" onclick="switchMode(1)">
+      ✍️ I have content — find subreddits
+    </button>
+    <button class="mode-btn" id="mode-btn-2" onclick="switchMode(2)">
+      📋 I have subreddits — find threads
+    </button>
+  </div>
+
+  <!-- MODE 1 -->
+  <div class="panel active" id="panel-1">
+    <div class="card">
+      <h2>Your Post / Product Description</h2>
+      <label>Paste what you want to promote or post about</label>
+      <textarea id="post-content" placeholder="E.g. I built a SaaS tool that helps developers track API usage and costs in real-time. It integrates with AWS, GCP, and Azure..."></textarea>
+
+      <div style="margin-top: 16px;">
+        <label>Also check these subreddits (optional)</label>
+        <div class="tag-input-wrap" id="configured-subs-wrap" onclick="document.getElementById('configured-input').focus()">
+          <input type="text" class="tag-text-input" id="configured-input" placeholder="Type subreddit name + Enter" />
+        </div>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <button class="btn btn-primary" id="find-btn" onclick="findThreads()">Find Best Threads</button>
+      </div>
+    </div>
+
+    <div class="error-box" id="error-1"></div>
+    <div class="loading" id="loading-1">
+      <div class="spinner"></div>
+      <div id="loading-1-msg">Scanning Reddit for opportunities...</div>
+    </div>
+    <div id="results-1"></div>
+  </div>
+
+  <!-- MODE 2 -->
+  <div class="panel" id="panel-2">
+    <div class="card">
+      <h2>Your Subreddits</h2>
+      <label>Add subreddits to scan for active threads</label>
+      <div class="tag-input-wrap" id="subreddit-tags-wrap" onclick="document.getElementById('sub-input').focus()">
+        <input type="text" class="tag-text-input" id="sub-input" placeholder="Type subreddit + Enter (e.g. entrepreneur)" />
+      </div>
+
+      <div style="margin-top: 16px;">
+        <label>What are you looking to promote? (optional — helps rank threads)</label>
+        <textarea id="mode2-context" placeholder="E.g. A productivity app for remote teams..." style="min-height: 80px;"></textarea>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <button class="btn btn-primary" id="scan-btn" onclick="scanSubreddits()">Scan Threads</button>
+      </div>
+    </div>
+
+    <div class="error-box" id="error-2"></div>
+    <div class="loading" id="loading-2">
+      <div class="spinner"></div>
+      <div id="loading-2-msg">Fetching active threads...</div>
+    </div>
+    <div id="results-2"></div>
+  </div>
+
+</div>
+
+<script>
+  // ─── State ───────────────────────────────────────────────────────────────
+  let configuredSubs = [];
+  let subredditTags  = [];
+  let availableProviders = [];
+  let selectedProvider   = null;
+
+  const PROVIDER_LABELS = { openai: 'OpenAI', claude: 'Claude', ollama: 'Ollama' };
+
+  // ─── Init: load providers ─────────────────────────────────────────────────
+  async function loadProviders() {
+    try {
+      const res  = await fetch('/api/providers');
+      const data = await res.json();
+      availableProviders = data.available || [];
+      selectedProvider   = availableProviders[0] || null;
+      renderProviderPills();
+    } catch {
+      document.getElementById('provider-pills').innerHTML =
+        '<span class="provider-pill unavailable">unavailable</span>';
+    }
+  }
+
+  function renderProviderPills() {
+    const wrap = document.getElementById('provider-pills');
+    const all  = ['openai', 'claude', 'ollama'];
+    wrap.innerHTML = all.map(p => {
+      const avail = availableProviders.includes(p);
+      const active = p === selectedProvider;
+      const cls = [
+        'provider-pill',
+        avail ? 'available' : 'unavailable',
+        active ? 'active ' + p : '',
+      ].join(' ');
+      return `<button class="${cls}" onclick="selectProvider('${p}')" ${avail ? '' : 'disabled title="Not configured"'}>${PROVIDER_LABELS[p]}</button>`;
+    }).join('');
+  }
+
+  function selectProvider(p) {
+    if (!availableProviders.includes(p)) return;
+    selectedProvider = p;
+    renderProviderPills();
+  }
+
+  // ─── Mode Switch ──────────────────────────────────────────────────────────
+  function switchMode(n) {
+    document.getElementById('panel-1').classList.toggle('active', n === 1);
+    document.getElementById('panel-2').classList.toggle('active', n === 2);
+    document.getElementById('mode-btn-1').classList.toggle('active', n === 1);
+    document.getElementById('mode-btn-2').classList.toggle('active', n === 2);
+  }
+
+  // ─── Tag inputs ───────────────────────────────────────────────────────────
+  function makeTagInput(inputId, getList, setList, wrapId) {
+    document.getElementById(inputId).addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        const val = e.target.value.trim().replace(/^r\//, '');
+        if (val && !getList().includes(val)) {
+          setList([...getList(), val]);
+          renderTags(wrapId, getList(), inputId, (s) => {
+            setList(getList().filter(x => x !== s));
+            renderTags(wrapId, getList(), inputId, arguments.callee);
+          });
+        }
+        e.target.value = '';
+      }
+    });
+  }
+
+  document.getElementById('configured-input').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ',') return;
+    e.preventDefault();
+    const val = e.target.value.trim().replace(/^r\//, '');
+    if (val && !configuredSubs.includes(val)) {
+      configuredSubs.push(val);
+      refreshConfiguredTags();
+    }
+    e.target.value = '';
+  });
+
+  document.getElementById('sub-input').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ',') return;
+    e.preventDefault();
+    const val = e.target.value.trim().replace(/^r\//, '');
+    if (val && !subredditTags.includes(val)) {
+      subredditTags.push(val);
+      refreshSubTags();
+    }
+    e.target.value = '';
+  });
+
+  function refreshConfiguredTags() {
+    renderTags('configured-subs-wrap', configuredSubs, 'configured-input', (s) => {
+      configuredSubs = configuredSubs.filter(x => x !== s);
+      refreshConfiguredTags();
+    });
+  }
+
+  function refreshSubTags() {
+    renderTags('subreddit-tags-wrap', subredditTags, 'sub-input', (s) => {
+      subredditTags = subredditTags.filter(x => x !== s);
+      refreshSubTags();
+    });
+  }
+
+  function renderTags(wrapId, tags, inputId, removeFn) {
+    const wrap  = document.getElementById(wrapId);
+    const input = document.getElementById(inputId);
+    wrap.querySelectorAll('.tag').forEach(el => el.remove());
+    tags.forEach(t => {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      const btn = document.createElement('button');
+      btn.textContent = '×';
+      btn.title = 'Remove';
+      btn.addEventListener('click', () => removeFn(t));
+      tag.append(`r/${t} `, btn);
+      wrap.insertBefore(tag, input);
+    });
+  }
+
+  // ─── API calls ────────────────────────────────────────────────────────────
+  async function findThreads() {
+    const content = document.getElementById('post-content').value.trim();
+    if (!content) { alert('Please enter your post content.'); return; }
+    if (!selectedProvider) { alert('No AI provider available. Check your .env keys or start Ollama.'); return; }
+
+    setLoading(1, true, `Asking ${PROVIDER_LABELS[selectedProvider]}...`);
+    clearError(1);
+    document.getElementById('results-1').innerHTML = '';
+
+    try {
+      const res = await fetch('/api/find-threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, configured_subreddits: configuredSubs, provider: selectedProvider }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Server error');
+      renderResults(1, data);
+    } catch (err) {
+      showError(1, err.message);
+    } finally {
+      setLoading(1, false);
+    }
+  }
+
+  async function scanSubreddits() {
+    if (!subredditTags.length) { alert('Add at least one subreddit.'); return; }
+    if (!selectedProvider) { alert('No AI provider available. Check your .env keys or start Ollama.'); return; }
+
+    setLoading(2, true, `Fetching & ranking with ${PROVIDER_LABELS[selectedProvider]}...`);
+    clearError(2);
+    document.getElementById('results-2').innerHTML = '';
+
+    try {
+      const res = await fetch('/api/subreddit-threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subreddits: subredditTags,
+          context: document.getElementById('mode2-context').value.trim(),
+          provider: selectedProvider,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Server error');
+      renderResults(2, data);
+    } catch (err) {
+      showError(2, err.message);
+    } finally {
+      setLoading(2, false);
+    }
+  }
+
+  // ─── Render results ───────────────────────────────────────────────────────
+  function renderResults(mode, data) {
+    const container = document.getElementById(`results-${mode}`);
+    const { results = [], subreddits = [], provider } = data;
+
+    if (!results.length) {
+      container.innerHTML = `<div class="empty-state">No strong matches found. Try different content or subreddits.</div>`;
+      return;
+    }
+
+    const providerBadge = provider
+      ? `<span class="used-provider-badge ${provider}">${PROVIDER_LABELS[provider] || provider}</span>`
+      : '';
+
+    let html = `<div class="results-header">
+      <h2>Opportunities Found</h2>
+      <div class="results-meta">
+        ${providerBadge}
+        <span class="count-badge">${results.length}</span>
+      </div>
+    </div>`;
+
+    if (subreddits.length) {
+      html += `<div style="margin-bottom:12px; font-size:13px; color:#666;">AI-suggested subreddits:</div>
+        <div class="suggested-subs">
+          ${subreddits.map(s => `<div class="sub-chip"><a href="https://reddit.com/r/${s}" target="_blank">r/${s}</a></div>`).join('')}
+        </div>`;
+    }
+
+    html += `<div class="thread-list">`;
+    results.forEach(t => {
+      const sc = t.score >= 80 ? 'score-high' : t.score >= 65 ? 'score-mid' : 'score-low';
+      html += `
+        <div class="thread-card">
+          <div class="thread-top">
+            <a class="thread-title" href="${t.url}" target="_blank">${esc(t.title)}</a>
+            <div class="score-badge ${sc}">${t.score}</div>
+          </div>
+          <div class="thread-meta">
+            <span class="meta-pill sub">r/${t.subreddit}</span>
+            <span class="meta-pill">⬆ ${(t.score ?? 0).toLocaleString()} upvotes</span>
+            <span class="meta-pill">💬 ${t.comments} comments</span>
+            <span class="meta-pill">${t.created}</span>
+            ${t.flair ? `<span class="meta-pill">${esc(t.flair)}</span>` : ''}
+          </div>
+          <div class="thread-reason">💡 ${esc(t.reason)}</div>
+          <div class="thread-action">→ ${esc(t.action)}</div>
+        </div>`;
+    });
+    html += `</div>`;
+    container.innerHTML = html;
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function setLoading(mode, on, msg) {
+    document.getElementById(`loading-${mode}`).classList.toggle('active', on);
+    if (msg) document.getElementById(`loading-${mode}-msg`).textContent = msg;
+    document.getElementById(mode === 1 ? 'find-btn' : 'scan-btn').disabled = on;
+  }
+
+  function showError(mode, msg) {
+    const el = document.getElementById(`error-${mode}`);
+    el.textContent = '⚠ ' + msg;
+    el.style.display = 'block';
+  }
+
+  function clearError(mode) {
+    const el = document.getElementById(`error-${mode}`);
+    el.style.display = 'none';
+  }
+
+  // ─── Boot ─────────────────────────────────────────────────────────────────
+  loadProviders();
+</script>
+</body>
+</html>
